@@ -5,43 +5,59 @@ client = TestClient(app)
 
 
 def test_get_activities_returns_all_activities():
-    response = client.get("/activities")
+    # Arrange
+    expected_activities = ["Chess Club", "Programming Class", "Gym Class"]
 
-    assert response.status_code == 200
+    # Act
+    response = client.get("/activities")
     data = response.json()
-    assert "Chess Club" in data
-    assert "Programming Class" in data
-    assert "Gym Class" in data
+
+    # Assert
+    assert response.status_code == 200
+    for activity in expected_activities:
+        assert activity in data
     assert isinstance(data["Chess Club"]["participants"], list)
 
 
 def test_signup_adds_participant_to_activity():
-    response = client.post("/activities/Chess%20Club/signup?email=tester@mergington.edu")
+    # Arrange
+    email = "tester@mergington.edu"
+    signup_path = f"/activities/Chess%20Club/signup?email={email}"
 
+    # Act
+    response = client.post(signup_path)
+
+    # Assert
     assert response.status_code == 200
     assert response.json()["message"] == "Signed up tester@mergington.edu for Chess Club"
 
     activities_response = client.get("/activities")
     assert activities_response.status_code == 200
-    assert "tester@mergington.edu" in activities_response.json()["Chess Club"]["participants"]
+    assert email in activities_response.json()["Chess Club"]["participants"]
 
 
 def test_signup_duplicate_participant_returns_400():
+    # Arrange
     email = "duplicate@mergington.edu"
     client.post(f"/activities/Programming%20Class/signup?email={email}")
 
+    # Act
     response = client.post(f"/activities/Programming%20Class/signup?email={email}")
 
+    # Assert
     assert response.status_code == 400
     assert response.json()["detail"] == "Student already signed up for this activity"
 
 
 def test_remove_participant_from_activity():
+    # Arrange
     email = "remove-test@mergington.edu"
     client.post(f"/activities/Gym%20Class/signup?email={email}")
 
+    # Act
     response = client.delete(f"/activities/Gym%20Class/participants?email={email}")
 
+    # Assert
     assert response.status_code == 200
     assert response.json()["message"] == f"Removed {email} from Gym Class"
 
@@ -51,9 +67,13 @@ def test_remove_participant_from_activity():
 
 
 def test_remove_missing_participant_returns_404():
-    response = client.delete(
-        "/activities/Chess%20Club/participants?email=missing@mergington.edu"
-    )
+    # Arrange
+    missing_email = "missing@mergington.edu"
+    delete_path = f"/activities/Chess%20Club/participants?email={missing_email}"
 
+    # Act
+    response = client.delete(delete_path)
+
+    # Assert
     assert response.status_code == 404
     assert response.json()["detail"] == "Participant not found"
